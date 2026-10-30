@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JSON table builder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#f2f4f6;--sf:#fff;--ink:#17212b;--mu:#64707d;--ln:#d9dee3;--ac:#0f766e;--acs:#d8f0ec;--nest:#6d5bd0;--nests:#e8e4fa;--hd:#eaeef1;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12171c;--sf:#1a2128;--ink:#e6ebef;--mu:#8f9ba7;--ln:#2d3741;--ac:#3fbfb2;--acs:#16403c;--nest:#a99bf5;--nests:#2c2750;--hd:#222b33;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12171c;--sf:#1a2128;--ink:#e6ebef;--mu:#8f9ba7;--ln:#2d3741;--ac:#3fbfb2;--acs:#16403c;--nest:#a99bf5;--nests:#2c2750;--hd:#222b33;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "IBM Plex Sans",system-ui,sans-serif}
+header{display:flex;align-items:baseline;gap:12px;padding:14px 18px 6px}
+h1{font-size:18px;margin:0;font-weight:600}
+header p{margin:0;color:var(--mu)}
+main{padding:8px 18px 28px;max-width:1700px;margin:0 auto}
+details.src{background:var(--sf);border:1px solid var(--ln);border-radius:8px;margin-bottom:12px}
+details.src>summary{padding:10px 14px;cursor:pointer;font-weight:500}
+.srcb{padding:0 14px 14px}
+.drop{border:2px dashed var(--ln);border-radius:8px;padding:14px;text-align:center;color:var(--mu);margin-bottom:10px;cursor:pointer}
+.drop.on,.drop:hover{border-color:var(--ac);background:var(--acs);color:var(--ink)}
+.drop u{color:var(--ac)}
+.or{color:var(--mu);font-size:12px;margin:0 0 6px}
+textarea{width:100%;height:170px;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--ln);border-radius:6px;padding:10px;resize:vertical}
+button,select,input{font:inherit;color:var(--ink)}
+button{background:var(--sf);border:1px solid var(--ln);border-radius:6px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--ac)}
+button.pri{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:500}
+:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.err{color:#c0392b;margin-top:8px}
+.note{color:var(--mu);font-size:13px}
+.grid{display:grid;grid-template-columns:minmax(340px,460px) minmax(0,1fr);gap:14px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+aside{background:var(--sf);border:1px solid var(--ln);border-radius:8px;max-height:calc(100vh - 40px);overflow:auto;position:sticky;top:12px}
+@media(max-width:900px){aside{position:static;max-height:60vh}}
+.at{padding:10px 12px;border-bottom:1px solid var(--ln);position:sticky;top:0;background:var(--sf);z-index:2}
+.at h2{font-size:14px;margin:0 0 6px}
+.at select{max-width:180px}
+.fr{padding:8px 12px 8px calc(12px + var(--d)*16px);border-bottom:1px solid var(--ln)}
+.fr[style*="--d:0"]{border-left:3px solid transparent}
+.fr:not([style*="--d:0"]){background:color-mix(in srgb,var(--nests) 35%,transparent);border-left:3px solid var(--nest)}
+.nm{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.nm b{font-weight:600}
+.t{font-style:normal;font-size:12px;color:var(--mu)}
+.t.o{color:var(--nest)}
+.nm small{color:var(--mu);font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ct{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+.ct select,.ct input{border:1px solid var(--ln);background:var(--bg);border-radius:5px;padding:4px 6px;min-width:0}
+.ct .lb{flex:1 1 110px}
+.fr.off .nm{opacity:.55}
+.res{min-width:0}
+.rt{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.rt input{flex:1 1 200px;max-width:320px;padding:6px 10px;border:1px solid var(--ln);background:var(--sf);border-radius:6px}
+.tw{overflow:auto;max-height:72vh;background:var(--sf);border:1px solid var(--ln);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--ln);text-align:left;vertical-align:top;white-space:nowrap;max-width:360px;overflow:hidden;text-overflow:ellipsis}
+th{position:sticky;top:0;background:var(--hd);font-weight:600;cursor:pointer;user-select:none;z-index:1}
+tbody tr:hover td{background:color-mix(in srgb,var(--acs) 40%,transparent)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.nul{color:var(--mu)}
+.chip,.b{display:inline-block;background:var(--acs);color:var(--ac);border-radius:10px;padding:0 8px;margin:0 4px 2px 0;font-size:12px}
+.b{background:var(--hd);color:var(--ink);border:1px solid var(--ln)}
+code{font:11px ui-monospace,Menlo,monospace;color:var(--mu)}
+a{color:var(--ac)}
+.sep{margin-top:18px}
+.sep h3{font-size:14px;margin:0 0 6px;display:flex;gap:8px;align-items:baseline}
+.sep h3 span{color:var(--nest)}
+.sep h3 small{color:var(--mu);font-weight:400}
+.sep .tw{border-color:var(--nest);max-height:50vh}
+.empty{padding:30px;text-align:center;color:var(--mu)}
+.faint{color:var(--mu);opacity:.45;font-size:11px}
+th:hover .faint{opacity:1}
+td.ov{cursor:zoom-in}
+.fbar{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.fbar:empty{display:none}
+.fl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--sf);border:1px solid var(--ln);border-radius:6px;padding:5px 8px}
+.fl select,.fl input{border:1px solid var(--ln);background:var(--bg);border-radius:5px;padding:4px 6px;min-width:0}
+.fl input{flex:1 1 120px}
+.fl.dim{opacity:.5}
+.x{padding:2px 8px}
+.pop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.pop[hidden]{display:none}
+.pb{background:var(--sf);border:1px solid var(--ln);border-radius:10px;width:min(720px,100%);max-height:80vh;display:flex;flex-direction:column}
+.ph{display:flex;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--ln)}
+.ph b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pb pre{margin:0;padding:14px;overflow:auto;white-space:pre-wrap;word-break:break-word;font:12.5px/1.5 ui-monospace,Menlo,monospace}
+</style>
+</head>
+<body>
+<header><h1>JSON table builder</h1><p>Paste a list, choose where each field goes, read it as a table.</p></header>
+<main>
+<details class="src" id="src" open>
+<summary>Source JSON</summary>
+<div class="srcb">
+<label class="drop" id="drop" for="file" tabindex="0">Drop a .json file here or <u>choose a file</u><input type="file" id="file" accept=".json,.txt,application/json,text/plain" hidden></label>
+<p class="or">or paste JSON below</p>
+<textarea id="ta" placeholder="Paste a JSON array of objects here…" spellcheck="false"></textarea>
+<div class="row"><button class="pri" id="load">Build table</button><button id="ex">Load example</button><span class="note" id="info"></span></div>
+<div class="err" id="err"></div>
+</div>
+</details>
+<div class="grid" id="app" hidden>
+<aside><div class="at"><h2>Fields</h2>
+<div class="row" style="margin:0"><button id="reset">Reset</button><button id="all">Show all</button><button id="none">Hide all</button></div>
+<div class="row"><label class="note" for="idk">Link nested tables by</label><select id="idk"></select></div></div>
+<div id="cfg"></div></aside>
+<section class="res">
+<div class="rt"><input id="flt" type="search" placeholder="Filter rows…"><button id="addf">+ Column filter</button><span class="note" id="cnt"></span><button id="csv">Copy CSV</button></div>
+<div class="fbar" id="fbar"></div>
+<div id="out"></div>
+</section>
+</div>
+</main>
+<div class="pop" id="pop" hidden><div class="pb" role="dialog" aria-modal="true" aria-labelledby="pt"><div class="ph"><b id="pt"></b><button id="pcopy">Copy</button><button id="pclose">Close</button></div><pre id="pv"></pre></div></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const typeOf=v=>v===null?'null':Array.isArray(v)?'array':typeof v;
+const plain=v=>v==null?'':typeof v==='object'?JSON.stringify(v):String(v);
+let rows=[],hay=[],schema=null,cfg={},S={limit:200,sorts:{},filters:[],flt:'',idKey:''};
+
+function build(vals,key,path,rel){
+  vals=vals.filter(v=>v!=null);
+  const n={key,path,rel,count:vals.length},objs=vals.filter(v=>typeOf(v)==='object'),arrs=vals.filter(Array.isArray);
+  if(objs.length){
+    n.kind='object';n.sample=objs[0];
+    const ks=new Set();objs.forEach(o=>Object.keys(o).forEach(k=>ks.add(k)));
+    n.children=[...ks].map(k=>build(objs.map(o=>o[k]),k,path?path+'.'+k:k,rel&&n.isItem!==false?rel+'.'+k:k));
+  }else if(arrs.length){
+    const items=arrs.flat().filter(x=>x!=null);n.sample=arrs.find(a=>a.length)||arrs[0];
+    if(items.some(x=>typeOf(x)==='object')){
+      n.kind='objarray';
+      const it=build(items.filter(x=>typeOf(x)==='object'),'',path+'[]','');
+      it.isItem=true;
+      const fix=(nd,r)=>{nd.rel=r;(nd.children||[]).forEach(c=>fix(c,r?r+'.'+c.key:c.key))};
+      fix(it,'');n.item=it;
+    }else n.kind='scalararray';
+  }else if(vals.length){
+    n.kind='scalar';n.sample=vals[0];
+    const ts=new Set(vals.map(typeOf));
+    n.sub=ts.size===1?(ts.has('number')?'number':ts.has('boolean')?'boolean':'string'):'string';
+    if(n.sub==='string'&&vals.every(v=>/^https?:\/\//.test(v)))n.sub='url';
+    n.distinct=new Set(vals.map(String)).size;
+  }else n.kind='empty';
+  return n;
+}
+function conf(n){
+  if(!cfg[n.path]){
+    let m='hide',fmt='text';
+    if(n.kind==='object')m='flatten';
+    else if(n.kind==='scalararray')m='chips';
+    else if(n.kind==='scalar'){m='show';fmt=n.sub==='number'?'number':n.sub==='url'?'link':(n.sub==='string'&&n.distinct<=8&&n.count>=8)?'badge':'text'}
+    cfg[n.path]={mode:m,fmt,label:''};
+  }
+  return cfg[n.path];
+}
+function cols(children,get,nested,seps){
+  const out=[];
+  for(const c of children){
+    const f=conf(c),g=r=>{const o=get(r);return o==null?undefined:o[c.key]};
+    if(f.mode==='hide')continue;
+    if(c.kind==='object'&&f.mode==='flatten'){out.push(...cols(c.children,g,nested,seps));continue}
+    if(f.mode==='separate'&&!nested){seps.push({node:c,get:g,f});continue}
+    out.push({node:c,f,get:g,label:f.label||c.rel,mode:f.mode==='separate'?'inline':f.mode});
+  }
+  return out;
+}
+function cell(c,v){
+  const n=c.node,m=c.mode,nul='<span class="nul">–</span>';
+  if(v==null||v==='')return nul;
+  if(n.kind==='scalararray'){
+    const a=Array.isArray(v)?v:[v];
+    if(m==='count')return a.length;
+    if(!a.length)return nul;
+    return m==='join'?esc(a.join(', ')):a.map(x=>`<span class="chip">${esc(plain(x))}</span>`).join('');
+  }
+  if(n.kind==='objarray'){
+    if(m==='count')return Array.isArray(v)?v.length:1;
+    return Array.isArray(v)&&!v.length?nul:`<code>${esc(JSON.stringify(v))}</code>`;
+  }
+  if(typeof v==='object')return `<code>${esc(JSON.stringify(v))}</code>`;
+  const fm=c.f.fmt;
+  if(fm==='number'&&typeof v==='number')return v.toLocaleString(undefined,{maximumFractionDigits:4});
+  if(fm==='badge')return `<span class="b">${esc(v)}</span>`;
+  if(fm==='link'&&/^https?:/.test(v))return `<a href="${esc(v)}" target="_blank" rel="noopener">${esc(String(v).replace(/^https?:\/\//,''))}</a>`;
+  return esc(v);
+}
+function text(c,v){
+  const n=c.node;
+  if(v==null)return '';
+  if(n.kind==='scalararray'||n.kind==='objarray'){if(c.mode==='count')return Array.isArray(v)?v.length:1;return n.kind==='scalararray'?[].concat(v).join(', '):JSON.stringify(v)}
+  return plain(v);
+}
+const isNum=c=>(c.node.kind==='scalar'&&c.f.fmt==='number')||c.mode==='count';
+function cmp(a,b){
+  if(a==null&&b==null)return 0;if(a==null)return 1;if(b==null)return -1;
+  if(Array.isArray(a))a=a.length;if(Array.isArray(b))b=b.length;
+  if(typeof a==='number'&&typeof b==='number')return a-b;
+  return String(a).localeCompare(String(b),undefined,{numeric:true});
+}
+let T={};
+function table(cs,recs,idLabel,tid){
+  const st=S.sorts[tid];
+  if(st){
+    const g=st.i<0?r=>r.id:(cs[st.i]||{}).get;
+    if(g)recs=recs.slice().sort((a,b)=>{const x=g(a),y=g(b);if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return cmp(x,y)*st.d});
+  }
+  T[tid]={cs,recs,idLabel};
+  const arrow=i=>st&&st.i===i?(st.d>0?' ▲':' ▼'):' <span class="faint">⇅</span>';
+  let h=`<div class="tw"><table data-t="${tid}"><thead><tr>`;
+  if(idLabel)h+=`<th data-i="-1" title="Click to sort">${esc(idLabel)}${arrow(-1)}</th>`;
+  cs.forEach((c,i)=>{h+=`<th class="${isNum(c)?'n':''}" data-i="${i}" title="Click to sort">${esc(c.label)}${arrow(i)}</th>`});
+  h+='</tr></thead><tbody>';
+  recs.slice(0,S.limit).forEach((r,ri)=>{
+    h+='<tr>';
+    if(idLabel)h+=`<td data-r="${ri}" data-c="-1">${esc(plain(r.id))}</td>`;
+    cs.forEach((c,ci)=>{h+=`<td class="${isNum(c)?'n':''}" data-r="${ri}" data-c="${ci}">${cell(c,c.get(r))}</td>`});
+    h+='</tr>';
+  });
+  return h+'</tbody></table></div>';
+}
+let lastCols=[],lastRows=[];
+function renderResult(keep){
+  const seps=[],mc=cols(schema.children,r=>r,false,seps);
+  lastCols=mc;T={};
+  if(!keep)renderFilters();
+  const q=S.flt.toLowerCase();
+  let rs=q?rows.filter((r,i)=>hay[i].includes(q)):rows.slice();
+  const act=S.filters.map(f=>({f,c:mc.find(c=>c.node.path===f.col)})).filter(x=>x.c);
+  if(act.length)rs=rs.filter(r=>act.every(x=>match(x.f,x.c,r)));
+  lastRows=rs;
+  $('#cnt').textContent=`${rs.length.toLocaleString()} of ${rows.length.toLocaleString()} rows · ${mc.length} columns`;
+  let h=mc.length?table(mc,rs,'','main'):'<div class="empty">No columns selected. Turn fields on in the list.</div>';
+  if(T.main)lastRows=T.main.recs;
+  let more=rs.length>S.limit;
+  seps.forEach((s,k)=>{
+    const n=s.node,item=n.kind==='objarray'?n.item:n,recs=[];
+    rs.forEach(r=>{const v=s.get(r);if(v==null)return;[].concat(v).forEach(x=>recs.push({id:r[S.idKey],x}))});
+    let cs;
+    if(n.kind==='scalararray')cs=[{node:{kind:'scalar'},f:{fmt:'text'},get:r=>r.x,label:'value',mode:'show'}];
+    else cs=cols(item.children,null,true,[]).length?remap(item.children):[];
+    if(recs.length>S.limit)more=true;
+    h+=`<div class="sep"><h3><span>${esc(s.f.label||n.path)}</span><small>${recs.length.toLocaleString()} rows${S.idKey?' · linked by '+esc(S.idKey):''}</small></h3>`+
+      (cs.length?table(cs,recs,S.idKey,'sep'+k):'<div class="empty">No columns selected for this table.</div>')+'</div>';
+  });
+  if(more)h+=`<div class="row"><button id="more">Show ${S.limit} more rows</button></div>`;
+  $('#out').innerHTML=h;
+}
+function remap(children){return cols(children,r=>r.x,true,[])}
+const MODES={
+  scalar:[['show','Show'],['hide','Hide']],
+  empty:[['hide','Hide (always empty)'],['show','Show']],
+  object:[['flatten','Flatten into columns'],['inline','Keep as JSON'],['separate','Separate table'],['hide','Hide']],
+  scalararray:[['chips','Chips'],['join','Comma list'],['count','Count'],['separate','Separate table'],['hide','Hide']],
+  objarray:[['hide','Hide'],['count','Count'],['inline','Keep as JSON'],['separate','Separate table']]
+};
+const KT={scalar:n=>n.sub,empty:()=>'always empty',object:()=>'object',scalararray:()=>'list',objarray:()=>'list of objects'};
+function fields(children,d,nested){
+  let h='';
+  for(const c of children){
+    const f=conf(c),ms=MODES[c.kind].filter(m=>!(nested&&m[0]==='separate'));
+    const sm=c.sample==null?'':String(typeof c.sample==='object'?JSON.stringify(c.sample):c.sample).slice(0,50);
+    h+=`<div class="fr ${f.mode==='hide'?'off':''}" style="--d:${d}" data-p="${esc(c.path)}">
+<div class="nm"><b>${esc(c.key)}</b><i class="t ${c.kind==='scalar'||c.kind==='empty'?'':'o'}">${KT[c.kind](c)}</i><small>${esc(sm)}</small></div>
+<div class="ct"><select class="mode" aria-label="Target for ${esc(c.key)}">${ms.map(m=>`<option value="${m[0]}" ${f.mode===m[0]?'selected':''}>${m[1]}</option>`).join('')}</select>
+<input class="lb" value="${esc(f.label)}" placeholder="${esc(c.rel||c.key)}" aria-label="Column name">
+${c.kind==='scalar'&&f.mode!=='hide'?`<select class="fmt" aria-label="Format">${[['text','Text'],['number','Number'],['badge','Badge'],['link','Link']].map(m=>`<option value="${m[0]}" ${f.fmt===m[0]?'selected':''}>${m[1]}</option>`).join('')}</select>`:''}</div></div>`;
+    if(c.kind==='object'&&['flatten','separate'].includes(f.mode))h+=fields(c.children,d+1,nested||f.mode==='separate');
+    if(c.kind==='objarray'&&f.mode==='separate')h+=fields(c.item.children,d+1,true);
+  }
+  return h;
+}
+function renderCfg(){
+  const keep=$('#cfg').parentElement.scrollTop;
+  $('#cfg').innerHTML=fields(schema.children,0,false);
+  $('#cfg').parentElement.scrollTop=keep;
+}
+function renderIds(){
+  const sc=schema.children.filter(c=>c.kind==='scalar');
+  $('#idk').innerHTML='<option value="">(none)</option>'+sc.map(c=>`<option ${c.key===S.idKey?'selected':''}>${esc(c.key)}</option>`).join('');
+}
+function walk(nodes,fn){nodes.forEach(n=>{fn(n);if(n.children)walk(n.children,fn);if(n.item)walk(n.item.children,fn)})}
+function load(txt){
+  $('#err').textContent='';
+  let data;
+  try{data=JSON.parse(txt)}catch(e){$('#err').textContent='That isn’t valid JSON: '+e.message;return}
+  let note='';
+  if(!Array.isArray(data)){
+    const find=(o,p,d)=>{
+      if(Array.isArray(o)&&o.length&&typeOf(o[0])==='object')return{a:o,p};
+      if(typeOf(o)==='object'&&d<4)for(const k in o){const r=find(o[k],p?p+'.'+k:k,d+1);if(r)return r}
+    };
+    const f=find(data,'',0);
+    if(f){data=f.a;note='Using the list found at '+f.p}else data=[data];
+  }
+  if(!data.length){$('#err').textContent='The list is empty.';return}
+  rows=data.map(v=>typeOf(v)==='object'?v:{value:v});
+  hay=rows.map(r=>JSON.stringify(r).toLowerCase());
+  cfg={};S.sorts={};S.filters=[];S.limit=200;S.flt='';$('#flt').value='';
+  schema=build(rows,'','','');
+  const sc=schema.children.filter(c=>c.kind==='scalar');
+  S.idKey=(sc.find(c=>/(^|_)id$/i.test(c.key))||sc[0]||{key:''}).key;
+  $('#info').textContent=(note?note+' · ':'')+rows.length.toLocaleString()+' rows';
+  $('#app').hidden=false;$('#src').open=false;
+  renderIds();renderCfg();renderResult();
+}
+$('#load').onclick=()=>load($('#ta').value);
+function readFile(f){
+  if(!f)return;
+  $('#err').textContent='';$('#info').textContent='Reading '+f.name+'…';
+  const r=new FileReader();
+  r.onload=()=>{
+    const t=String(r.result).replace(/^\uFEFF/,'');
+    $('#ta').value=t.length>2e6?'':t;
+    load(t);
+    if(schema)$('#info').textContent=f.name+' · '+rows.length.toLocaleString()+' rows';
+  };
+  r.onerror=()=>{$('#err').textContent='Couldn’t read that file.'};
+  r.readAsText(f);
+}
+$('#file').onchange=e=>{readFile(e.target.files[0]);e.target.value=''};
+$('#drop').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('#file').click()}});
+['dragenter','dragover'].forEach(ev=>$('#drop').addEventListener(ev,e=>{e.preventDefault();$('#drop').classList.add('on')}));
+['dragleave','drop'].forEach(ev=>$('#drop').addEventListener(ev,e=>{e.preventDefault();$('#drop').classList.remove('on')}));
+$('#drop').addEventListener('drop',e=>readFile(e.dataTransfer.files[0]));
+$('#ta').addEventListener('paste',()=>setTimeout(()=>load($('#ta').value),50));
+$('#ex').onclick=()=>{
+  const ex=[{page_id:'vOUd6eBlwW',name:'full bookkeeping',page_type:'offering',disposition:'child_page',modifiers:{offerings:['Full Bookkeeping'],customer_type:null,location:null},sections:[{title:'Overview',words:300},{title:'Pricing',words:120}],keyword:'general bookkeeping services',search_volume:40,business_relevance_score:0.7277,sources:['business','search'],current_url:'https://vertaccount.com/services/full-bookkeeping',confidence:'high'},
+  {page_id:'k3Qx9aLmZ1',name:'payroll for restaurants',page_type:'offering',disposition:'new_page',modifiers:{offerings:['Payroll'],customer_type:'Restaurants',location:null},sections:[{title:'Overview',words:250}],keyword:'restaurant payroll services',search_volume:90,business_relevance_score:0.6120,sources:['search'],current_url:null,confidence:'medium'}];
+  $('#ta').value=JSON.stringify(ex,null,2);load($('#ta').value);
+};
+$('#cfg').addEventListener('change',e=>{
+  const fr=e.target.closest('.fr');if(!fr)return;const f=cfg[fr.dataset.p];
+  if(e.target.classList.contains('mode')){f.mode=e.target.value;renderCfg()}
+  else if(e.target.classList.contains('fmt'))f.fmt=e.target.value;
+  renderResult();
+});
+$('#cfg').addEventListener('input',e=>{
+  if(!e.target.classList.contains('lb'))return;
+  cfg[e.target.closest('.fr').dataset.p].label=e.target.value.trim();renderResult();
+});
+$('#reset').onclick=()=>{cfg={};renderCfg();renderResult()};
+$('#all').onclick=()=>{walk(schema.children,n=>{const f=conf(n);if(n.kind==='scalar'||n.kind==='empty')f.mode='show';if(n.kind==='object'&&f.mode==='hide')f.mode='flatten';if(n.kind==='scalararray'&&f.mode==='hide')f.mode='chips'});renderCfg();renderResult()};
+$('#none').onclick=()=>{schema.children.forEach(n=>{conf(n).mode='hide'});renderCfg();renderResult()};
+$('#idk').onchange=e=>{S.idKey=e.target.value;renderResult()};
+let ft;$('#flt').oninput=e=>{clearTimeout(ft);ft=setTimeout(()=>{S.flt=e.target.value;S.limit=200;renderResult()},150)};
+$('#out').addEventListener('click',e=>{
+  if(e.target.id==='more'){S.limit+=200;renderResult(true);return}
+  const th=e.target.closest('th[data-i]');
+  if(th){
+    const tid=th.closest('table').dataset.t,i=+th.dataset.i,st=S.sorts[tid];
+    if(!st||st.i!==i)S.sorts[tid]={i,d:1};else if(st.d===1)S.sorts[tid]={i,d:-1};else delete S.sorts[tid];
+    renderResult(true);return;
+  }
+  const td=e.target.closest('td[data-r]');
+  if(td&&!e.target.closest('a')&&td.scrollWidth>td.clientWidth+1){
+    const t=T[td.closest('table').dataset.t],c=+td.dataset.c,rec=t.recs[+td.dataset.r];
+    if(c<0)openPop(t.idLabel,rec.id);else openPop(t.cs[c].label,t.cs[c].get(rec));
+  }
+});
+$('#out').addEventListener('mouseover',e=>{
+  const td=e.target.closest('td[data-r]');
+  if(!td||td.dataset.ck)return;td.dataset.ck=1;
+  if(td.scrollWidth>td.clientWidth+1){
+    const s=td.textContent;td.classList.add('ov');
+    td.title=s.slice(0,400)+(s.length>400?'…':'')+'\n— click to see the full value';
+  }
+});
+$('#csv').onclick=async()=>{
+  const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  const t=[lastCols.map(c=>q(c.label)).join(',')].concat(lastRows.map(r=>lastCols.map(c=>q(text(c,c.get(r)))).join(','))).join('\n');
+  const ok=await copyText(t);
+  $('#csv').textContent=ok?'Copied':'Copy failed';setTimeout(()=>$('#csv').textContent='Copy CSV',1500);
+};
+async function copyText(t){
+  let ok=false;
+  try{await navigator.clipboard.writeText(t);ok=true}catch(_){
+    const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();
+    try{ok=document.execCommand('copy')}catch(_){}a.remove();
+  }
+  return ok;
+}
+function openPop(label,v){
+  $('#pt').textContent=label||'Value';
+  $('#pv').textContent=v==null?'':typeof v==='object'?JSON.stringify(v,null,2):String(v);
+  $('#pcopy').textContent='Copy';$('#pop').hidden=false;$('#pclose').focus();
+}
+const closePop=()=>{$('#pop').hidden=true};
+$('#pclose').onclick=closePop;
+$('#pop').addEventListener('click',e=>{if(e.target.id==='pop')closePop()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closePop()});
+$('#pcopy').onclick=async()=>{
+  const ok=await copyText($('#pv').textContent);
+  $('#pcopy').textContent=ok?'Copied':'Copy failed';
+};
+
+const OPS=[['has','contains'],['nhas','doesn’t contain'],['eq','equals'],['ne','not equals'],['gt','>'],['ge','≥'],['lt','<'],['le','≤'],['empty','is empty'],['nempty','is not empty']];
+function match(f,c,r){
+  const v=c.get(r);
+  const s=v==null?'':Array.isArray(v)?v.join(', '):typeof v==='object'?JSON.stringify(v):String(v);
+  if(f.op==='empty')return s==='';
+  if(f.op==='nempty')return s!=='';
+  if(f.val==='')return true;
+  const a=s.toLowerCase(),b=f.val.toLowerCase(),x=parseFloat(s),y=parseFloat(f.val),nu=s!==''&&isFinite(x)&&isFinite(y);
+  const eq=Array.isArray(v)?v.some(i=>String(i).toLowerCase()===b):(a===b||(nu&&x===y));
+  switch(f.op){
+    case 'has':return a.includes(b);
+    case 'nhas':return !a.includes(b);
+    case 'eq':return eq;
+    case 'ne':return !eq;
+  }
+  if(s==='')return false;
+  const d=nu?x-y:cmp(s,f.val);
+  return f.op==='gt'?d>0:f.op==='ge'?d>=0:f.op==='lt'?d<0:d<=0;
+}
+function renderFilters(){
+  const mc=lastCols;
+  $('#fbar').innerHTML=S.filters.map((f,i)=>{
+    const ok=mc.some(c=>c.node.path===f.col);
+    return `<div class="fl ${ok?'':'dim'}" data-f="${i}"><select class="fc" aria-label="Column">${mc.map(c=>`<option value="${esc(c.node.path)}" ${c.node.path===f.col?'selected':''}>${esc(c.label)}</option>`).join('')}${ok?'':`<option value="${esc(f.col)}" selected>(hidden column)</option>`}</select><select class="fo" aria-label="Condition">${OPS.map(o=>`<option value="${o[0]}" ${o[0]===f.op?'selected':''}>${o[1]}</option>`).join('')}</select>${f.op==='empty'||f.op==='nempty'?'':`<input class="fv" value="${esc(f.val)}" placeholder="value" aria-label="Value">`}<button class="x" aria-label="Remove filter">✕</button></div>`;
+  }).join('');
+}
+$('#addf').onclick=()=>{
+  const c=lastCols[0];if(!c)return;
+  S.filters.push({col:c.node.path,op:isNum(c)?'ge':'has',val:''});S.limit=200;renderResult();
+  const l=$('#fbar').querySelector('.fl:last-child .fv');if(l)l.focus();
+};
+let fvt;
+$('#fbar').addEventListener('input',e=>{
+  if(!e.target.classList.contains('fv'))return;
+  const i=+e.target.closest('.fl').dataset.f,v=e.target.value;
+  clearTimeout(fvt);fvt=setTimeout(()=>{S.filters[i].val=v;S.limit=200;renderResult(true)},150);
+});
+$('#fbar').addEventListener('change',e=>{
+  const fl=e.target.closest('.fl');if(!fl)return;const f=S.filters[+fl.dataset.f];
+  if(e.target.classList.contains('fc'))f.col=e.target.value;
+  else if(e.target.classList.contains('fo'))f.op=e.target.value;
+  else return;
+  S.limit=200;renderResult();
+});
+$('#fbar').addEventListener('click',e=>{
+  if(!e.target.classList.contains('x'))return;
+  S.filters.splice(+e.target.closest('.fl').dataset.f,1);S.limit=200;renderResult();
+});
+</script>
+</body>
+</html>
